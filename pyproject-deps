@@ -1,0 +1,36 @@
+#!python
+
+import argparse
+import re
+import sys
+import toml
+
+try:
+  with open('pyproject.toml', 'rt') as file:
+    pyproject_content = file.read()
+except IOError as e:
+    sys.stderr.write('pyproject.toml not found\n')
+    exit(1)
+
+parser = argparse.ArgumentParser(
+    prog='pyproject-deps',
+    description='Print project deps to stdout'
+)
+parser.add_argument('-x', '--exclude')
+args = vars(parser.parse_args())
+
+excludes = args['exclude'] or ''
+if excludes:
+  excludes = re.split(',| |;', excludes)
+
+deps = toml.loads(pyproject_content)['project']['dependencies']
+final_deps = []
+for dep in deps:
+  ignore = any([re.match(f"^{e}$", dep) for e in excludes])
+  if ignore:
+    sys.stderr.write(f"Excluded '{dep}'\n")
+  else:
+    final_deps.append(dep)
+
+print(' '.join(final_deps))
+
